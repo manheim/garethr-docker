@@ -31,6 +31,11 @@
 #  script.  Disabling this may be useful if integrating with existing modules.
 #  Default: true
 #
+# [*enable*]
+#   (optional) Whether or not to enable puppet Service. If left unset enable in
+#   Service resource will be set to the value of [*running*].
+#   Default: undef
+#
 # [*docker_service*]
 #  (optional) If (and how) the Docker service itself is managed by Puppet
 #  true          -> Service['docker']
@@ -67,6 +72,7 @@ define docker::run(
   $service_prefix = 'docker-',
   $restart_service = true,
   $manage_service = true,
+  $enable = undef,
   $docker_service = false,
   $disable_network = false,
   $privileged = false,
@@ -221,11 +227,16 @@ define docker::run(
       mode    => $mode,
     }
 
+    $real_enable = $enable ? {
+      undef   => $running,
+      default => $enable,
+    }
+
     if $manage_service {
       if $running == false {
         service { "${service_prefix}${sanitised_title}":
           ensure    => $running,
-          enable    => false,
+          enable    => $real_enable,
           hasstatus => $hasstatus,
           require   => File[$initscript],
         }
@@ -256,7 +267,7 @@ define docker::run(
 
         service { "${service_prefix}${sanitised_title}":
           ensure    => $running,
-          enable    => true,
+          enable    => $real_enable,
           provider  => $provider,
           hasstatus => $hasstatus,
           require   => File[$initscript],
